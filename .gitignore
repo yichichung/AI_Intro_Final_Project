@@ -1,0 +1,8 @@
+# Ignore auto-generated + heavy files
+output/
+models/
+reports/
+*.parquet
+*.pkl
+*.log
+*.csv
