@@ -1,0 +1,15 @@
+# Ignore raw CSVs
+data/*.csv
+
+# Ignore ngrok binary and archive
+ngrok*
+*.tgz
+
+# Ignore logs
+*.log
+reports/*.txt
+
+# Ignore temporary or system files
+*.pyc
+__pycache__/
+.DS_Store

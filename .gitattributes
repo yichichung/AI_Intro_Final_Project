@@ -1,0 +1,8 @@
+models/pick_lgb_v3.txt filter=lfs diff=lfs merge=lfs -text
+models/pick_lgb_v3 filter=lfs diff=lfs merge=lfs -text
+data/stats1.csv filter=lfs diff=lfs merge=lfs -text
+data/stats2.csv filter=lfs diff=lfs merge=lfs -text
+*.csv filter=lfs diff=lfs merge=lfs -text
+*.txt filter=lfs diff=lfs merge=lfs -text
+*.pkl filter=lfs diff=lfs merge=lfs -text
+*.parquet filter=lfs diff=lfs merge=lfs -text
