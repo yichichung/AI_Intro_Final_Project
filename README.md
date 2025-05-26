@@ -3,9 +3,9 @@ Pull Request: Initial Commit from Local Backup with Git LFS
 
 code模式行數:
     直接執行: 40行:　目標：直接部署 app.py（含勝率曲線）
-    專案目錄總覽與用途： 100行
-    專案執行說明整體步驟總覽: 223行
-    UI 程式碼設計說明與期望改動（ui/app.py）:328行
+    專案目錄總覽與用途： 101行
+    專案執行說明整體步驟總覽: 224行
+    UI 程式碼設計說明與期望改動（ui/app.py）:329行
 
 This PR includes the full migration of the LoL_BP_Project from local development to GitHub with:
 ✅ Cleaned Git history (previous large-file commits removed)
