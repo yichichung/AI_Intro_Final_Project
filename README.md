@@ -1,5 +1,11 @@
 Pull Request: Initial Commit from Local Backup with Git LFS
 🔧 Summary
+
+直接執行: 37行:　目標：直接部署 app.py（含勝率曲線）
+專案目錄總覽與用途： 100行
+專案執行說明整體步驟總覽: 223行
+UI 程式碼設計說明與期望改動（ui/app.py）:328行
+
 This PR includes the full migration of the LoL_BP_Project from local development to GitHub with:
 ✅ Cleaned Git history (previous large-file commits removed)
 
@@ -30,6 +36,48 @@ data/, models/, scripts/, ui/, output/, reports/
 
 ✅ Dev branch is ready to be merged into main
 
+目標：直接部署 app.py（含勝率曲線）
+📂 需要的專案結構（只需這些）
+bash
+Copy code
+LoL_BP_Project/
+│
+├── models/
+│   └── wr_lgb_v4.txt          ⬅️ 英雄勝率模型（由 train_wr.py 訓練）
+│
+├── output/
+│   └── champ_wr.parquet       ⬅️ 每隻英雄藍/紅方勝率（由 data_preprocess_v2.py 計算）
+│
+├── data/
+│   └── champs.csv             ⬅️ id 對應英雄名稱的表
+│
+├── ui/
+│   └── app.py                 ⬅️ 主程式，從這邊執行
+✅ 安裝環境（只需一次）
+bash
+Copy code
+conda activate lolbp  # 或你的 Python 環境
+pip install -U streamlit lightgbm pandas scikit-learn
+✅ 下載與準備檔案
+檔案路徑	來源/用途
+models/wr_lgb_v4.txt	train_wr.py 訓練的 LightGBM 勝率模型
+output/champ_wr.parquet	每隻英雄的藍方與紅方平均勝率，用於 pick 模型
+data/champs.csv	英雄 id 對應名稱，建議為英文名稱欄位
+ui/app.py	Streamlit 前端程式，實作推薦與曲線顯示
+
+✅ 你可以把我剛剛整理好的 app.py 丟進 ui/ 資料夾直接使用。
+
+✅ 執行指令
+bash
+Copy code
+cd ~/LoL_BP_Project/ui
+streamlit run app.py
+啟動後會顯示：
+
+nginx
+Copy code
+Local URL: http://localhost:8501
+Network URL: http://你的IP:8501
 
 
 📂 Git LFS Tracked Files
@@ -172,84 +220,247 @@ ngrok / ngrok.zip
 支援外網訪問（透過 Ngrok）
 
 
-當初為什麼訓練 wr_lgb_v4.txt
-這個模型是使用 match_dataset.parquet 中的欄位訓練來預測某一方是否會獲勝（win=1 or 0），使用的特徵有：
-藍方/紅方的 picks（藍紅各 5 名英雄）
+專案執行說明
+整體步驟總覽
+1.預處理資料 → scripts/data_preprocess_v2.py
 
 
-每位英雄的角色編碼
+2.訓練英雄勝率模型（WR 模型） → scripts/train_wr.py
 
 
-ban 英雄
+3.訓練英雄選角模型（Pick 模型） → scripts/train_pick_v3_tqdm.py
 
 
-duration（對局時間）
+4.啟動前測試 CLI 預測效果 → scripts/search.py
 
 
-baronKills, dragonKills, towerKills（teamstats.csv 來的）
+5.啟動網頁推薦系統 → ui/app.py（用 streamlit）
 
 
-patch（版本號碼）
-
-
-透過這些特徵，訓練出一個能夠根據雙方組合，預測哪一隊會獲勝的模型，AUC 通常約 0.79 左右。
-
-✅ 它的用途
-雖然你目前最主要使用的是 pick_lgb_v3.txt（針對單一 pick 預測 top-5），但 wr_lgb_v4.txt 可以用來做更高層次的事情：
-🌟 延伸應用一：模擬整場比賽勝率
-根據使用者輸入藍紅雙方全部 pick 完後的組合，由 wr 模型輸出勝率
-
-
-這可以變成 團隊組合強度預測 工具
-
-
-甚至可在 ban 階段顯示「目前藍方預測勝率為 48.3%」
+6.（選用）用 ngrok 建立公開網址
 
 
 
-🌟 延伸應用二：推薦 Ban（或破壞對方組合）
-模擬「如果紅方 ban 掉某一隻英雄，藍方勝率會下降/上升多少」
+🔹 Step 1：資料預處理
+進入 scripts/ 目錄，執行：
+bash
+Copy code
+python data_preprocess_v2.py
+
+這會產生 3 個主要的預處理資料集：
+檔案路徑
+說明
+output/match_dataset.parquet
+整理過的賽事資訊（含藍紅方英雄、隊伍勝負等）
+output/pick_dataset.parquet
+Ban/Pick 模型訓練資料（以單一英雄為預測目標）
+output/champ_wr.parquet
+每位英雄在藍方 / 紅方的平均勝率
 
 
-這可用來推薦 破壞力最高的 ban
+🔹 Step 2：訓練模型
+✅ 英雄勝率模型
+bash
+Copy code
+python train_wr.py
+
+輸出：
+models/wr_lgb_v4.txt：使用 champ_wr 特徵建構的 LightGBM 勝率預測模型
+
+
+reports/wr_cv_v4.txt：包含 AUC 評估數值
+
+
+🔎 此模型未直接應用於推薦，但可作為未來擴充用來 根據目前隊伍組合預測勝率 的基礎。
+✅ 英雄推薦模型（Pick 預測）
+bash
+Copy code
+python train_pick_v3_tqdm.py --n_trials 10 --num_boost 400
+
+可背景執行並紀錄 log：
+bash
+Copy code
+nohup python train_pick_v3_tqdm.py --n_trials 10 --num_boost 400 > reports/train_pick_v3.log 2>&1 &
+tail -f reports/train_pick_v3.log
+
+輸出：
+models/pick_lgb_v3.txt：推薦模型
+
+
+models/pick_encoder_v3.pkl：LabelEncoder
+
+
+reports/pick_cv_v3.txt：Top-5 accuracy 與最佳參數
 
 
 
-🌟 延伸應用三：納入 pick 模型的特徵
-你目前的 pick_lgb_v3.txt 模型，是根據單一英雄預測其會被選中的機率
+🔹 Step 3：啟動 Web UI（Streamlit）
+bash
+Copy code
+cd ui/
+streamlit run app.py
+
+若需對外連線，可使用 ngrok ：
+bash
+Copy code
+ngrok config add-authtoken <your_token>
+ngrok http 8501
+
+將顯示網址分享給使用者。
+
+🗂️ 專案資料夾說明
+資料夾
+用途
+data/
+原始資料（CSV 格式）
+output/
+Parquet 格式的預處理資料，供模型與 UI 使用
+models/
+LightGBM 訓練後的模型檔案與 encoder
+reports/
+訓練日誌與模型評估報告
+scripts/
+所有 Python 處理腳本，包括訓練、查詢、資料轉換
+ui/
+Streamlit 前端應用程式，主程式為 app.py
 
 
-若你納入 wr_lgb 的預測值作為 pick 特徵，可能能提升 Top-5 accuracy
+📁 UI 程式碼設計說明（ui/app.py）
+目前版本支援功能如下：
+使用者透過側欄輸入已選 / 已禁英雄（藍方與紅方）
 
 
-例如：
+設定目前選角順序、角色代碼、隊伍陣營
+
+
+推薦 Top-5 可選英雄，附帶預測機率與名稱（champs.csv 對應）
+
+
+英雄選項為動態過濾（不重複於 Ban 與 Pick 名單中）
+
+
+目前使用的模型檔案：
+models/pick_lgb_v3.txt
+
+
+models/pick_encoder_v3.pkl
+
+
+特徵欄位來自 output/pick_dataset.parquet
+
+
+
+💡 改進方向與未完成項目
+項目
+狀態
+說明
+支援 Ban/Pick 階段步驟（DRAFT_PHASES）
+✅ 已整合
+使用 step = st.number_input(...) 對應至動作類型
+每步驟過濾推薦名單
+✅ 已實作
+根據 pick/bans，自動排除重複英雄
+胜率預測整合
+⛔ 尚未整合
+wr_lgb_v4.txt 可用來計算目前藍/紅陣營勝率（未使用）
+英雄名稱顯示
+✅ 已完成
+由 champs.csv 對應 ID to name
+支援最多 10 選角記錄
+⛔ 僅支援前 5 名
+特徵欄位為固定長度（5 pick + 5 ban）
+多模型比較
+⛔ 尚未支援
+可比較 v2 / v3 預測模型輸出效果
+
+
+目標：逐步勝率預測曲線
+🎯 效果示意：
+在 UI 或報表中呈現出這樣的效果：
+Pick Step
+Blue Picks
+Red Picks
+Predicted Blue Win Rate
+1
+1
+
+
+52.1%
+2
+1
+11
+50.3%
+3
+1
+11, 64
+48.7%
+4
+1, 105
+11, 64
+51.4%
+5
+1, 105
+11, 64, 103
+52.7%
+...
+...
+...
+...
+10
+1,105,55,238,61
+11,64,103,157,121
+59.8%
+
+
+🔍 如何實作（逐步構建勝率曲線）
+🔢 1. 組合所有可能的中間步驟
+你只要有一組完整的 ban pick list，例如：
 python
-CopyEdit
-# 建立 pick 候選者，分別加入該角色後整體 wr 模型預測勝率
-# 以此作為額外特徵，加入 pick 模型中
+Copy code
+picks_b = [1, 105, 55, 238, 61]
+picks_r = [11, 64, 103, 157, 121]
+
+就可以逐步填入，預測每一步的勝率變化。
+🧪 2. 實際 Python 程式碼
+python
+Copy code
+from copy import deepcopy
+import pandas as pd
+
+def compute_progression_wr(picks_b, picks_r, model):
+    progression = []
+    for step in range(1, 11):
+        temp_b = deepcopy(picks_b[:min(step, 5)])
+        temp_r = deepcopy(picks_r[:max(0, step - 5)])
+        # Pad to 5
+        while len(temp_b) < 5:
+            temp_b.append(0)
+        while len(temp_r) < 5:
+            temp_r.append(0)
+        X_step = pd.DataFrame([{
+            f"blue{i+1}": temp_b[i] for i in range(5)
+        } | {
+            f"red{i+1}": temp_r[i] for i in range(5)
+        }])
+        win_prob = model.predict(X_step)[0]
+        progression.append(dict(step=step, blue=temp_b[:step], red=temp_r[:step-5], wr=win_prob))
+    return progression
+
+📊 3. 加在 app.py 顯示
+你可以在 UI 裡加入一張 line_chart 或 table 呈現：
+python
+Copy code
+wr_prog = compute_progression_wr(picks_b, picks_r, WR_MODEL)
+df_prog = pd.DataFrame(wr_prog)
+st.line_chart(df_prog.set_index("step")["wr"])
 
 
-⚠️ 為何目前沒使用它？
-因為你目前的 train_pick_v3.py 專注於單一 pick 預測，而非整隊勝率，且預測過程速度也會慢一點。當時先完成 baseline 成果比較實際。
-
-🛠️ 現在如何使用 wr 模型？
-若你想立即使用：
-load_model("models/wr_lgb_v4.txt")
-
-
-建立完整的 team 組合（藍紅各 5 名英雄）
-
-
-預測 model.predict(X) → 回傳 win 機率
-
-
-
-📈 對 Final Project 的加分貢獻
-✅ 若你加入 wr 預測（可在畫面上展示每一步對雙方勝率的影響），將：
-提升 系統的策略深度
-
-
-展示 你對機器學習模型整合與應用的能力
-
-
-在報告中作為 模型整合、策略分析亮點
+🚀 好處與應用場景
+應用
+說明
+教學與分析
+可以看到哪一步選角最影響勝率（拐點）
+AI 模擬推薦
+讓模型選出能 最大化勝率上升幅度的 pick
+視覺化 UI 強化
+使用者對當下選角的勝率變化有感知
