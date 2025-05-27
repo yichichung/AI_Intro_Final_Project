@@ -13,7 +13,7 @@ from pathlib import Path
 
 st.set_page_config(layout="wide", page_title="LoL BanPick 推薦器")
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]  # 這樣會指向 ~/LoL_BP_Project/
 MODEL = ROOT / "models"
 OUTPUT = ROOT / "output"
 DATA = ROOT / "data"
