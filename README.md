@@ -218,7 +218,7 @@ Streamlit 前端 App：
    ```
 6. **(選用) Ngrok 外網分享**  
    ```bash
-   ngrok config add-authtoken <your_token>
+   ngrok config add-authtoken 2xcbYiu9hjsQMdKfWcKWEIyixtw_235mjXu9LBF1M8dvjn1tF
    ngrok http 8501
    ```
 
