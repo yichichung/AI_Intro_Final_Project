@@ -1,4 +1,3 @@
-# working version
 """
 Streamlit App — BanPick 推薦 UI（包含 AI 推薦 + 勝率預測 + Red 方輸入加權）
 """
