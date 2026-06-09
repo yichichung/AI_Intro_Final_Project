@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "output"
 # 含 bluepicks, redpicks, win, version, duration, objectives
 MDF = pd.read_parquet(OUT / "match_dataset.parquet",
-                      engine="pyarrow", use_nullable_dtypes=True)
+                      engine="pyarrow", dtype_backend="numpy_nullable")
 # champ_wr.parquet 中索引為 champion id
 WR = pd.read_parquet(OUT / "champ_wr.parquet")
 
